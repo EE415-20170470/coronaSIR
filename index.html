@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Line Chart</title>
+    <script src="chart.min.js"></script>
+    <script src="utils.js"></script>
+    <style>
+    canvas{
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+    }
+    </style>
+</head>
+
+<body>
+    <div style="width:75%;">
+        <canvas id="canvas"></canvas>
+    </div>
+	<button id="stopDraw">Stop Draw</button>
+    <br>
+    <br>
+    <script>
+        class SIR {
+            constructor(step_size, factor_B, factor_Y, initial_S, initial_I, initial_R) {
+                this.step_size = step_size;
+                this.factor_B = factor_B;
+                this.factor_Y = factor_Y;
+                this.current_S = initial_S;
+                this.current_I = initial_I;
+                this.current_R = initial_R;
+                this.factor_N = initial_S + initial_I + initial_R;
+            }
+
+            caculate_next_step() {
+                var next_S = this.current_S - this.step_size*(this.factor_B*this.current_S*this.current_I/this.factor_N);
+                var next_I = this.current_I + this.step_size*(this.factor_B*this.current_S*this.current_I/this.factor_N - this.factor_Y*this.current_I);
+                var next_R = this.current_R + this.step_size*(this.factor_Y*this.current_I);
+                this.current_S = next_S; this.current_I = next_I; this.current_R = next_R;
+                return [next_S, next_I, next_R];
+            }
+        }
+
+        const step_size = 1; const factor_B = 0.25; const factor_Y = 0.1;
+        const initial_S = 500000; const initial_I = 23216; const initial_R = 20650;
+        var corona_month = 1; var corona_day = 1;
+        let SIR_ = new SIR(step_size, factor_B, factor_Y, initial_S, initial_I, initial_R);
+        var config = {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Susceptible',
+                    backgroundColor: window.chartColors.blue,
+                    borderColor: window.chartColors.blue,
+                    fill: false
+                }, {
+                    label: 'Infected',
+                    fill: false,
+                    backgroundColor: window.chartColors.red,
+                    borderColor: window.chartColors.red
+                }, {
+                    label: 'Recovered',
+                    fill: false,
+                    backgroundColor: window.chartColors.orange,
+                    borderColor: window.chartColors.orange
+                }]
+            },
+            options: {
+                responsive: true,
+                title: {
+                    display: true,
+                    text: 'Chart.js Line Chart'
+                },
+                tooltips: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                hover: {
+                    mode: 'nearest',
+                    intersect: true
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Month'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Value'
+                        }
+                    }
+                }
+            }
+        };
+
+        window.onload = function() {
+            var ctx = document.getElementById('canvas').getContext('2d');
+            window.myLine = new Chart(ctx, config);
+        };
+
+        var colorNames = Object.keys(window.chartColors);
+
+        var draw_interval = setInterval(function() {
+            var month = corona_month + "월 " + corona_day + "일";
+            var current_SIR;
+            current_SIR = SIR_.caculate_next_step();
+
+            config.data.labels.push(month);
+
+            config.data.datasets.forEach(function(dataset, index) {
+                dataset.data.push(current_SIR[index]);
+            });
+
+            corona_day = corona_day + 1;
+            if (corona_day > 30) {
+                corona_day = 0;
+                corona_month = corona_month + 1;
+            }
+
+            window.myLine.update();
+        }, 100);
+
+		document.getElementById('stopDraw').addEventListener('click', function() {
+			clearInterval(draw_interval);
+		});
+    </script>
+</body>
+
+</html>
